@@ -1,13 +1,12 @@
 import UserList from './components/UserList';
-import {useState, useRef, useReducer} from "react";
+import React, {useState, useRef, useReducer} from "react";
 import CreateUser from './components/CreateUser';
+import useInputs from './components/hooks/useInputs';
 
+//UserDispatch라는 context를 생성하고 내보내기
+export const UserDispatch = React.createContext(null);
 function App() {
   const initialState = {
-    inputs: {
-      username: '',
-      userage: ''
-    },
     users: [
       {id:1, username: "그린", age: 40},
       {id:2, username: "블루", age: 30},
@@ -17,40 +16,33 @@ function App() {
   }
   function reducer(state,action){
     switch(action.type){
-      case 'CHANGE_INPUT':
-        return {
-          ...state,
-          inputs: {
-            ...state.inputs,
-            [action.name]:action.value
-          }
-        };
       case 'CREATE_USER':
         return {
-          inputs: state.inputs,
           users: [
             ...state.users,
             action.user
           ]
         }
+      case 'MEMBER_TOGGLE':
+        return {
+          users: state.users.map(user=>
+            user.id === action.id ? {...user, member:!user.member}: user)
+        }
+      case 'MEMBER-DELETE':
+        return {
+          users: state.users.filter(user=> user.id !== action.id)
+        }  
         default:
         return state;
     }
   }
+  const [{username, userage} , onChange, reset ] = useInputs({
+    username: '',
+    userage: ''
+  })
   const [state, dispatch] = useReducer(reducer, initialState)
   const {users} = state;
-  const {username, userage} = state.inputs;
   const nextId = useRef(5);
-
-  function onChange(e){
-    const {name, value} = e.target;
-    console.log(name,value);
-    dispatch({
-      type: 'CHANGE_INPUT',
-      name: name,
-      value: value
-    })
-  }
 
   function onCreate(){
     dispatch({
@@ -58,23 +50,31 @@ function App() {
       user: {
         id: nextId.current,
         username: username,
-        age: userage
+        age: userage,
+        member: false
       }
     })
     nextId.current = nextId.current+1;
-    // setUsers([
-    //   ...users,
-    //   {id:nextId.current,
-    //   username: username,
-    // age: userage}
-    // ])
   }
-
+  function onToggle(id){
+    dispatch({
+      type: 'MEMBER_TOGGLE',
+      id: id
+    })
+  }
+  function onDelete(id){
+    dispatch({
+      type: 'MEMBER-DELETE',
+      id: id
+    })
+  }
   return (
+    <UserDispatch.Provider value={dispatch}>
     <div className="App">
       <CreateUser onCreate={onCreate} onChange={onChange} username={username} userage={userage}/>
       <UserList users={users} />
     </div>
+    </UserDispatch.Provider>
   );
 }
 
